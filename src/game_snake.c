@@ -20,89 +20,65 @@ typedef struct {
 void setInputMode();
 void restoreInputMode();
 void initializeGrid(char grid[ROWS][COLS]);
-void printGrid(char grid[ROWS][COLS]);
-void placeBait(char grid[ROWS][COLS], int* baitRow, int* baitCol, SnakePart* snake, int length);
+void printGrid(char grid[ROWS][COLS], int score);
+void placeBait(int* baitRow, int* baitCol, SnakePart* snake, int length);
 void updateGrid(char grid[ROWS][COLS], SnakePart* snake, int length, int baitRow, int baitCol);
 int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int baitCol);
-int checkCollision(SnakePart* snake, int length);
-void waitForNewInput();
+int isMoveValid(SnakePart* snake, int length, SnakePart nextHead);
 
 int main() {
     char grid[ROWS][COLS];
-    SnakePart snake[ROWS * COLS]; // Maximum possible length
+    SnakePart snake[ROWS * COLS];
     int snakeLength = INITIAL_SNAKE_LENGTH;
-    int baitRow, baitCol;
-    char input = 'd'; // Start moving to the right
+    int baitRow, baitCol, score = 0;
+    char direction = 'd'; // Start moving to the right
+    char input;
     int running = 1;
 
-    // Initialize terminal
     setInputMode();
     atexit(restoreInputMode);
 
-    // Initialize game
     srand(time(NULL));
     initializeGrid(grid);
+
+    // Initialize snake position
     snake[0].row = ROWS / 2;
-    snake[0].col = COLS / 2; // Snake starts in the middle
-    placeBait(grid, &baitRow, &baitCol, snake, snakeLength);
+    snake[0].col = COLS / 2;
+
+    placeBait(&baitRow, &baitCol, snake, snakeLength);
     updateGrid(grid, snake, snakeLength, baitRow, baitCol);
 
-while (running) {
+    while (running) {
         system("clear");
-        printGrid(grid);
+        printGrid(grid, score);
         printf("Use 'w', 'a', 's', 'd' to move. Press 'q' to quit.\n");
 
-        usleep(200000); // Adjust game speed
-
-        // Read user input
+        // Non-blocking input
         if (read(STDIN_FILENO, &input, 1) > 0) {
             if (input == 'q') {
-                running = 0; // Exit the game
-                continue;
-            } else if (input != 'w' && input != 'a' && input != 's' && input != 'd') {
-                continue; // Ignore invalid inputs
+                running = 0;
+                break;
+            } else if (input == 'w' || input == 'a' || input == 's' || input == 'd') {
+                direction = input;
             }
         }
 
-        // Attempt to move the snake
-        if (!moveSnake(snake, &snakeLength, input, baitRow, baitCol)) {
-            printf("\nInvalid move. Snake hit the border or itself. Waiting for new input...\n");
-
-            // Wait for valid input after an invalid move
-            while (1) {
-                if (read(STDIN_FILENO, &input, 1) > 0) {
-                    if (input == 'q') {
-                        running = 0; // Exit on 'q'
-                        break;
-                    } else if (input == 'w' || input == 'a' || input == 's' || input == 'd') {
-                        // Check if the new input is valid and proceed
-                        if (moveSnake(snake, &snakeLength, input, baitRow, baitCol)) {
-                            break; // Valid move found, exit wait loop
-                        } else {
-                            printf("\nInvalid move. Try again.\n");
-                        }
-                    }
-                }
-            }
-
-            if (!running) {
-                break; // Exit the main loop if the game is terminated
-            }
+        // Move snake
+        if (!moveSnake(snake, &snakeLength, direction, baitRow, baitCol)) {
+            continue; // Invalid move, wait for next input
         }
 
-        // Update the grid and check for bait
-        updateGrid(grid, snake, snakeLength, baitRow, baitCol);
-
-        // Check if the snake eats the bait
+        // Check if bait is eaten
         if (snake[0].row == baitRow && snake[0].col == baitCol) {
-            snakeLength++;
-            placeBait(grid, &baitRow, &baitCol, snake, snakeLength);
+            score++;
+            placeBait(&baitRow, &baitCol, snake, snakeLength);
         }
+
+        updateGrid(grid, snake, snakeLength, baitRow, baitCol);
+        usleep(200000); // Adjust game speed
     }
 
-
-
-    printf("\nGame Over. Thank you for playing!\n");
+    printf("\nGame Over. Final Score: %d\n", score);
     return 0;
 }
 
@@ -112,6 +88,8 @@ void setInputMode() {
     tcgetattr(STDIN_FILENO, &original_termios);
     new_termios = original_termios;
     new_termios.c_lflag &= ~(ICANON | ECHO);
+    new_termios.c_cc[VMIN] = 0; // Non-blocking input
+    new_termios.c_cc[VTIME] = 0;
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios);
 }
 
@@ -120,29 +98,18 @@ void restoreInputMode() {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
 }
 
-// Wait for new valid input after an invalid move
-void waitForNewInput() {
-    char input;
-    while (1) {
-        if (read(STDIN_FILENO, &input, 1) > 0) {
-            if (input == 'w' || input == 'a' || input == 's' || input == 'd') {
-                break; // Exit loop on valid input
-            }
-        }
-    }
-}
-
-// Initialize the grid with empty spaces
+// Initialize the grid
 void initializeGrid(char grid[ROWS][COLS]) {
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLS; j++) {
-            grid[i][j] = '.';
+            grid[i][j] = '.'; // Reset grid
         }
     }
 }
 
-// Print the grid
-void printGrid(char grid[ROWS][COLS]) {
+// Print the grid and score
+void printGrid(char grid[ROWS][COLS], int score) {
+    printf("Score: %d\n\n", score);
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLS; j++) {
             printf("%c ", grid[i][j]);
@@ -152,13 +119,14 @@ void printGrid(char grid[ROWS][COLS]) {
 }
 
 // Place bait at a random location
-void placeBait(char grid[ROWS][COLS], int* baitRow, int* baitCol, SnakePart* snake, int length) {
+void placeBait(int* baitRow, int* baitCol, SnakePart* snake, int length) {
     int valid = 0;
     while (!valid) {
         *baitRow = rand() % ROWS;
         *baitCol = rand() % COLS;
         valid = 1;
-        // Ensure bait does not spawn on the snake
+
+        // Ensure bait doesn't overlap with snake
         for (int i = 0; i < length; i++) {
             if (snake[i].row == *baitRow && snake[i].col == *baitCol) {
                 valid = 0;
@@ -166,33 +134,30 @@ void placeBait(char grid[ROWS][COLS], int* baitRow, int* baitCol, SnakePart* sna
             }
         }
     }
-    grid[*baitRow][*baitCol] = 'X';
 }
 
-// Update the grid with the snake and bait
+// Update the grid
 void updateGrid(char grid[ROWS][COLS], SnakePart* snake, int length, int baitRow, int baitCol) {
-    // Clear the grid
-    initializeGrid(grid);
+    initializeGrid(grid); // Clear grid
 
-    // Place the bait
-    grid[baitRow][baitCol] = 'X';
-
-    // Place the snake on the grid
+    // Place snake
     for (int i = 0; i < length; i++) {
         if (i == 0) {
-            grid[snake[i].row][snake[i].col] = 'O'; // Snake's head
+            grid[snake[i].row][snake[i].col] = 'O'; // Head
         } else {
-            grid[snake[i].row][snake[i].col] = '#'; // Snake's body
+            grid[snake[i].row][snake[i].col] = '#'; // Body
         }
     }
-}
 
+    // Place bait
+    grid[baitRow][baitCol] = 'X';
+}
 
 // Move the snake
 int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int baitCol) {
-    SnakePart nextHead = snake[0]; // Calculate the next head position
+    SnakePart nextHead = snake[0];
 
-    // Update the next head position based on the direction
+    // Calculate next position
     switch (direction) {
         case 'w': nextHead.row--; break;
         case 'a': nextHead.col--; break;
@@ -212,14 +177,19 @@ int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int ba
         }
     }
 
-    // Move the snake's body
+    // Move body
     for (int i = *length - 1; i > 0; i--) {
         snake[i] = snake[i - 1];
     }
 
-    // Update the snake's head
+    // Update head
     snake[0] = nextHead;
+
+    // Handle snake growth
+    if (nextHead.row == baitRow && nextHead.col == baitCol) {
+        (*length)++;
+        snake[*length - 1] = snake[*length - 2]; // Initialize new tail
+    }
 
     return 1; // Valid move
 }
-
