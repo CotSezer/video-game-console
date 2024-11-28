@@ -3,18 +3,20 @@
 #include <unistd.h>
 #include <termios.h>
 #include <time.h>
+#include <signal.h>
 
 #define ROWS 15
 #define COLS 15
 #define INITIAL_SNAKE_LENGTH 1
 
-// Global terminal settings
-struct termios original_termios;
-
 // Snake structure
 typedef struct {
     int row, col;
 } SnakePart;
+
+// Global terminal settings and snake pointer
+struct termios original_termios;
+SnakePart* snake = NULL; // Declare globally
 
 // Function prototypes
 void setInputMode();
@@ -25,15 +27,26 @@ void placeBait(int* baitRow, int* baitCol, SnakePart* snake, int length);
 void updateGrid(char grid[ROWS][COLS], SnakePart* snake, int length, int baitRow, int baitCol);
 int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int baitCol);
 int isMoveValid(SnakePart* snake, int length, SnakePart nextHead);
+void handleSignal(int sig);
 
 int main() {
+    // Dynamically allocate memory for snake
+    snake = malloc(sizeof(SnakePart) * (ROWS * COLS)); 
+    if (!snake) {
+        fprintf(stderr, "Memory allocation failed!\n");
+        exit(EXIT_FAILURE);
+    }
+
     char grid[ROWS][COLS];
-    SnakePart snake[ROWS * COLS];
     int snakeLength = INITIAL_SNAKE_LENGTH;
     int baitRow, baitCol, score = 0;
     char direction = 'd'; // Start moving to the right
     char input;
     int running = 1;
+
+    // Set up signal handling
+    signal(SIGINT, handleSignal);
+    signal(SIGTERM, handleSignal);
 
     setInputMode();
     atexit(restoreInputMode);
@@ -79,6 +92,10 @@ int main() {
     }
 
     printf("\nGame Over. Final Score: %d\n", score);
+
+    // Free allocated memory before exiting
+    free(snake);
+
     return 0;
 }
 
@@ -96,6 +113,15 @@ void setInputMode() {
 // Restore terminal settings
 void restoreInputMode() {
     tcsetattr(STDIN_FILENO, TCSANOW, &original_termios);
+}
+
+// Handle graceful exit for signals
+void handleSignal(int sig) {
+    restoreInputMode();
+    if (snake) {
+        free(snake);  // Free dynamically allocated memory
+    }
+    exit(0);      // Exit the program
 }
 
 // Initialize the grid
