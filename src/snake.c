@@ -62,6 +62,7 @@ int main() {
     updateGrid(grid, snake, snakeLength, baitRow, baitCol);
 
     while (running) {
+        usleep(200000); // Adjust game speed
         system("clear");
         printGrid(grid, score);
         printf("Use 'w', 'a', 's', 'd' to move. Press 'q' to quit.\n");
@@ -88,7 +89,7 @@ int main() {
         }
 
         updateGrid(grid, snake, snakeLength, baitRow, baitCol);
-        usleep(200000); // Adjust game speed
+       
     }
 
     printf("\nGame Over. Final Score: %d\n", score);
