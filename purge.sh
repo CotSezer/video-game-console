@@ -2,7 +2,7 @@
 
 # Variables
 IMAGE_NAME="storage_vgc.img"
-MOUNT_DIR="mount_storage"
+MOUNT_DIR="mount"
 LINK_NAME="storage_vgc_device"
 
 # Unmount and detach using terminate.sh

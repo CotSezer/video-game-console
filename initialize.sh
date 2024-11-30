@@ -2,7 +2,7 @@
 
 # Variables
 IMAGE_NAME="storage_vgc.img"
-IMAGE_SIZE="100M" # Size of the image file
+IMAGE_SIZE="1M" # Size of the image file
 
 # Create a new disk image
 echo "Creating $IMAGE_NAME..."
