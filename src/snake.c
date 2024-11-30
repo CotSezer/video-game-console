@@ -122,6 +122,10 @@ void handleSignal(int sig) {
     if (snake) {
         free(snake);  // Free dynamically allocated memory
     }
+    restoreInputMode(); // Restore terminal settings
+    printf("\nGame exited due to signal %d. Goodbye!\n", sig);
+    fflush(stdout); // Ensure the message is printed immediately
+    sleep(1);       // Wait for 3 seconds
     exit(0);      // Exit the program
 }
 

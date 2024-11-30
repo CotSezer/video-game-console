@@ -15,18 +15,17 @@
 
 // Global terminal attributes
 struct termios original_termios;
+pid_t child_pid = -1; // Initialize to -1 to indicate no child running
 
 // Function prototypes
 void setInputMode();
 void restoreInputMode();
-void signalHandler(int signo);
+void signalHandler(int sig);
 int scanGames(char games[MAX_GAMES][MAX_NAME_LENGTH]);
 void printMenu(char games[MAX_GAMES][MAX_NAME_LENGTH], int gameCount, int selectedGame, int exitSelected);
 void startGame(char* gameName);
 
-
 int main(int argc, char *argv[]) {
-
     // Buffer to hold the path
     char exe_path[PATH_MAX];
 
@@ -39,6 +38,8 @@ int main(int argc, char *argv[]) {
         perror("chdir failed");
         return 1;
     }
+
+    // Array to store game names
     char games[MAX_GAMES][MAX_NAME_LENGTH];
     int gameCount = scanGames(games);
     int selectedGame = 0;
@@ -46,49 +47,48 @@ int main(int argc, char *argv[]) {
     char input;
     int running = 1;
 
+    // Check if there are games to display
     if (gameCount == 0) {
         printf("No games found in the current directory.\n");
         return 1;
     }
 
+    // Setup terminal and signal handling
     setInputMode(); // Set non-canonical input mode
     signal(SIGINT, signalHandler);
     signal(SIGTERM, signalHandler);
 
+    // Main menu loop
     while (running) {
         system("clear");
         printMenu(games, gameCount, selectedGame, exitSelected);
 
+        // Handle user input
         if (read(STDIN_FILENO, &input, 1) > 0) {
             if (input == 'q') {
                 running = 0; // Exit the main screen
             } else if (input == 'w') {
+                // Navigate up
                 if (exitSelected) {
-                    // If currently on Exit, move focus to the last game
                     exitSelected = 0;
                     selectedGame = gameCount - 1;
+                } else if (selectedGame > 0) {
+                    selectedGame--;
                 } else {
-                    // Move up in the game list
-                    if (selectedGame == 0) {
-                        exitSelected = 1; // If at the first game, move to Exit
-                    } else {
-                        selectedGame--;
-                    }
+                    exitSelected = 1;
                 }
             } else if (input == 's') {
+                // Navigate down
                 if (!exitSelected && selectedGame == gameCount - 1) {
-                    // If currently on the last game, move focus to Exit
                     exitSelected = 1;
                 } else if (exitSelected) {
-                    // If currently on Exit, move focus to the first game
                     exitSelected = 0;
                     selectedGame = 0;
                 } else {
-                    // Move down in the game list
                     selectedGame++;
                 }
             } else if (input == 'a' || input == 'd') {
-                // Toggle focus between game list and Exit button
+                // Toggle between menu and exit
                 exitSelected = !exitSelected;
             } else if (input == '\n') {
                 if (exitSelected) {
@@ -107,9 +107,8 @@ int main(int argc, char *argv[]) {
 
 // Set terminal input mode for non-canonical input
 void setInputMode() {
-    struct termios new_termios;
     tcgetattr(STDIN_FILENO, &original_termios); // Get current terminal attributes
-    new_termios = original_termios;
+    struct termios new_termios = original_termios;
     new_termios.c_lflag &= ~(ICANON | ECHO); // Disable canonical mode and echo
     tcsetattr(STDIN_FILENO, TCSANOW, &new_termios); // Apply new settings
 }
@@ -120,9 +119,18 @@ void restoreInputMode() {
 }
 
 // Signal handler for graceful exit
-void signalHandler(int signo) {
+void signalHandler(int sig) {
+    // If a child process is running, terminate it
+    if (child_pid > 0) {
+        kill(child_pid, sig);   // Forward the signal to the child
+        waitpid(child_pid, NULL, 0); // Wait for the child to terminate
+    }
+
     restoreInputMode(); // Restore terminal settings
-    printf("\nMain screen exited due to signal %d. Goodbye!\n", signo);
+
+    printf("\nMain screen exited due to signal %d. Goodbye!\n", sig);
+    fflush(stdout); // Ensure the message is printed immediately
+
     exit(0);
 }
 
@@ -174,26 +182,30 @@ void printMenu(char games[MAX_GAMES][MAX_NAME_LENGTH], int gameCount, int select
 }
 
 // Start the selected game using fork()
+// Start the selected game using fork()
 void startGame(char* gameName) {
-    pid_t pid = fork();
+    child_pid = fork();
 
-    if (pid == -1) {
+    if (child_pid == -1) {
         perror("Failed to fork");
         return;
     }
 
-    if (pid == 0) {
+    if (child_pid == 0) {
         // Child process: Execute the game
-        char command[256];
-        snprintf(command, sizeof(command), "./%s", gameName); // Add "./" prefix
-        execlp(command, gameName, (char *)NULL);
+        char command[PATH_MAX];
+        snprintf(command, sizeof(command), "./%s", gameName); // Add "./" prefix for relative path
 
-        // If execlp fails, print an error and exit
+        execl(command, gameName, (char *)NULL);
+
+        // If execl fails, print an error and exit
         perror("Failed to start game");
         exit(EXIT_FAILURE);
     } else {
         // Parent process: Wait for the child to finish
         int status;
-        waitpid(pid, &status, 0);
+        waitpid(child_pid, &status, 0);
+        child_pid = -1; // Reset child_pid after the child process exits
     }
 }
+
