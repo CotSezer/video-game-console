@@ -1,29 +1,48 @@
 #!/bin/bash
 
-# Set paths
-DISK_IMAGE="storage_vgc.img"
-MOUNT_POINT="./mount"
-DEVICE_FILE="<device-file>"  # Name of the symbolic link
-LOOP_DEVICE="/dev/loop0"  # Use the loop device you just created
+# Variables
+IMAGE_NAME="storage_vgc.img"
+MOUNT_DIR="mount"
+LINK_NAME="storage_vgc_device"
+
+# Ensure losetup command is available
+if ! command -v losetup &> /dev/null; then
+    echo "Error: 'losetup' command not found. Please install util-linux."
+    exit 1
+fi
 
 # Create mount directory if it doesn't exist
-if [ ! -d "$MOUNT_POINT" ]; then
-    mkdir $MOUNT_POINT
+if [ ! -d $MOUNT_DIR ]; then
+    mkdir $MOUNT_DIR
+    echo "Created mount directory $MOUNT_DIR."
 fi
 
-# Mount the loop device to the mount point
-sudo mount $LOOP_DEVICE $MOUNT_POINT
+# Find or attach the image to a loop device
+LOOP_DEVICE=$(sudo losetup -f) # Use sudo for losetup
 
-
-# Create a symbolic link to the device (optional)
-if [ ! -L "$DEVICE_FILE" ]; then
-    ln -s $LOOP_DEVICE $DEVICE_FILE
-    echo "Created symbolic link $DEVICE_FILE."
+if [ -z "$LOOP_DEVICE" ]; then
+    echo "Error: No available loop devices."
+    exit 1
 fi
 
-# Copy the executables to the mounted image
-cp bin/* $MOUNT_POINT
+# Attach the image to the loop device
+echo "Attaching $IMAGE_NAME to $LOOP_DEVICE..."
+sudo losetup $LOOP_DEVICE $IMAGE_NAME
 
+# Create a symbolic link
+ln -sf $LOOP_DEVICE $LINK_NAME
 
-echo "Disk image mounted at $MOUNT_POINT."
-echo "Executables copied to disk image and permissions set."
+# Mount the loop device
+echo "Mounting $LOOP_DEVICE to $MOUNT_DIR..."
+sudo mount $LOOP_DEVICE $MOUNT_DIR
+
+# Verify mount success
+if [ $? -eq 0 ]; then
+    echo "$IMAGE_NAME is mounted and ready to use."
+else
+    echo "Error: Failed to mount $IMAGE_NAME."
+    sudo losetup -d $LOOP_DEVICE # Detach on failure
+    rm -f $LINK_NAME
+    exit 1
+fi
+

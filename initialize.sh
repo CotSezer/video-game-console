@@ -1,21 +1,14 @@
 #!/bin/bash
 
-# Set the name of the disk image file
-DISK_IMAGE="storage_vgc.img"
-DISK_SIZE="64M"  # Disk size (adjust as needed)
+# Variables
+IMAGE_NAME="storage_vgc.img"
+IMAGE_SIZE="100M" # Size of the image file
 
-# Remove the existing disk image if it exists
-if [ -f "$DISK_IMAGE" ]; then
+# Create a new disk image
+echo "Creating $IMAGE_NAME..."
+dd if=/dev/zero of=$IMAGE_NAME bs=1M count=100 status=progress
+echo "Formatting $IMAGE_NAME as ext4..."
+mkfs.ext4 $IMAGE_NAME
 
-    rm -f "$DISK_IMAGE"  # Force remove the existing disk image
-fi
+echo "$IMAGE_NAME created and formatted."
 
-# Create a new disk image file
-
-dd if=/dev/zero of=$DISK_IMAGE bs=1M count=64
-
-# Format the disk image as ext4 using sudo
-
-sudo mkfs -t ext4 $DISK_IMAGE
-
-echo "Disk image '$DISK_IMAGE' created and formatted as ext4."

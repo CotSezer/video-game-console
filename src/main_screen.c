@@ -7,6 +7,9 @@
 #include <termios.h>
 #include <sys/wait.h>
 
+#include <libgen.h>   // For dirname()
+#include <limits.h>   // For PATH_MAX
+
 #define MAX_GAMES 100
 #define MAX_NAME_LENGTH 256
 
@@ -21,7 +24,21 @@ int scanGames(char games[MAX_GAMES][MAX_NAME_LENGTH]);
 void printMenu(char games[MAX_GAMES][MAX_NAME_LENGTH], int gameCount, int selectedGame, int exitSelected);
 void startGame(char* gameName);
 
-int main() {
+
+int main(int argc, char *argv[]) {
+
+    // Buffer to hold the path
+    char exe_path[PATH_MAX];
+
+    // Get the directory containing the executable
+    realpath(argv[0], exe_path);   // Resolve full path of the executable
+    char *dir_name = dirname(exe_path);
+
+    // Change the current working directory to the directory of the executable
+    if (chdir(dir_name) != 0) {
+        perror("chdir failed");
+        return 1;
+    }
     char games[MAX_GAMES][MAX_NAME_LENGTH];
     int gameCount = scanGames(games);
     int selectedGame = 0;
