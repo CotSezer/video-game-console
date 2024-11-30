@@ -40,12 +40,12 @@ int main() {
         if (checkWin(board)) {
             printf("Player %d wins!\n", player == 1 ? 2 : 1);
             printf("\nGame Over. Thank you for playing!\n");
-            sleep(3);
+            sleep(1);
             break;
         } else if (isDraw(board)) {
             printf("It's a draw!\n");
             printf("\nGame Over. Thank you for playing!\n");
-            sleep(3);
+            sleep(1);
             break;
         }
 
@@ -148,6 +148,7 @@ void makeMove(char board[SIZE][SIZE], int player) {
             if (input == 'q' || input == 'Q') {
                 printf("\nPlayer %d has quit the game. Goodbye!\n", player);
                 restoreInputMode(); // Restore terminal settings
+                sleep(1);
                 exit(0);
             }
 
