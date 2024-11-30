@@ -14,9 +14,6 @@ fi
 # Mount the loop device to the mount point
 sudo mount $LOOP_DEVICE $MOUNT_POINT
 
-# Create the necessary directories inside the mounted image if they don't exist
-mkdir -p $MOUNT_POINT/bin
-mkdir -p $MOUNT_POINT/src
 
 # Create a symbolic link to the device (optional)
 if [ ! -L "$DEVICE_FILE" ]; then
@@ -25,10 +22,8 @@ if [ ! -L "$DEVICE_FILE" ]; then
 fi
 
 # Copy the executables to the mounted image
-cp bin/* $MOUNT_POINT/bin/
+cp bin/* $MOUNT_POINT
 
-# Set executable permissions for the copied executables
-chmod +x $MOUNT_POINT/bin/*
 
 echo "Disk image mounted at $MOUNT_POINT."
 echo "Executables copied to disk image and permissions set."
