@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-MOUNT_DIR="mount_storage"
+MOUNT_DIR="mount"
 LINK_NAME="storage_vgc_device"
 LOOP_DEVICE=$(readlink $LINK_NAME)
 
