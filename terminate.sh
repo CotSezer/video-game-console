@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Variables
-MOUNT_DIR="mount5"
+MOUNT_DIR="mount"
 LINK_NAME="storage_vgc_device"
 
 # Resolve the loop device from the symbolic link
