@@ -28,6 +28,7 @@ void updateGrid(char grid[ROWS][COLS], SnakePart* snake, int length, int baitRow
 int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int baitCol);
 int isMoveValid(SnakePart* snake, int length, SnakePart nextHead);
 void handleSignal(int sig);
+void finishScreen(int score);
 
 int main() {
     // Dynamically allocate memory for snake
@@ -92,7 +93,8 @@ int main() {
        
     }
 
-    printf("\nGame Over. Final Score: %d\n", score);
+    finishScreen(score);
+    sleep(1);
 
     // Free allocated memory before exiting
     free(snake);
@@ -118,7 +120,7 @@ void restoreInputMode() {
 
 // Handle graceful exit for signals
 void handleSignal(int sig) {
-    restoreInputMode();
+
     if (snake) {
         free(snake);  // Free dynamically allocated memory
     }
@@ -223,4 +225,29 @@ int moveSnake(SnakePart* snake, int* length, char direction, int baitRow, int ba
     }
 
     return 1; // Valid move
+}
+
+
+void finishScreen(int score) {
+
+    system("clear");
+
+    printf("\n");
+
+    printf("####################################\n");
+
+    printf("#                                  #\n");
+
+    printf("#          GAME OVER!              #\n");
+
+    printf("#                                  #\n");
+
+    printf("#     Your Final Score: %d          #\n", score);
+
+    printf("#                                  #\n");
+
+    printf("####################################\n");
+
+    printf("\nThank you for playing!\n");
+
 }

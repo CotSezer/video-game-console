@@ -39,9 +39,13 @@ int main() {
 
         if (checkWin(board)) {
             printf("Player %d wins!\n", player == 1 ? 2 : 1);
+            printf("\nGame Over. Thank you for playing!\n");
+            sleep(3);
             break;
         } else if (isDraw(board)) {
             printf("It's a draw!\n");
+            printf("\nGame Over. Thank you for playing!\n");
+            sleep(3);
             break;
         }
 
@@ -52,7 +56,6 @@ int main() {
     }
 
     restoreInputMode(); // Restore terminal settings
-    printf("\nGame Over. Thank you for playing!\n");
     return 0;
 }
 
@@ -75,6 +78,7 @@ void restoreInputMode() {
 void signalHandler(int signo) {
     restoreInputMode();
     printf("\nGame exited due to signal %d. Goodbye!\n", signo);
+    sleep(1);
     exit(0);
 }
 
@@ -124,47 +128,6 @@ int isDraw(char board[SIZE][SIZE]) {
     return 1;
 }
 
-// Allow a player to make a move
-// void makeMove(char board[SIZE][SIZE], int player) {
-//     int row = -1, col = -1;
-//     char symbol = (player == 1) ? 'X' : 'O';
-//     char input;
-
-//     while (1) {
-//         printf("Enter your move (row and column: 1-3): ");
-//         fflush(stdout); // Ensure the prompt is displayed immediately
-
-//         // Read a single character input
-//         if (read(STDIN_FILENO, &input, 1) == 1) {
-//             if (input == 'q' || input == 'Q') {
-//                 printf("\nPlayer %d has quit the game. Goodbye!\n", player);
-//                 restoreInputMode(); // Restore terminal settings
-//                 exit(0);
-//             }
-
-//             // Read row and column after first input
-//             ungetc(input, stdin); // Push back the input for scanf to process
-//             if (scanf("%d %d", &row, &col) != 2) {
-//                 printf("\nInvalid input. Try again.\n");
-//                 while (getchar() != '\n'); // Clear the input buffer
-//                 continue;
-//             }
-
-//             // Convert to 0-based indexing
-//             row--;
-//             col--;
-
-//             // Validate the move
-//             if (row >= 0 && row < SIZE && col >= 0 && col < SIZE && board[row][col] == ' ') {
-//                 board[row][col] = symbol;
-//                 break;
-//             } else {
-//                 printf("\nInvalid move. Try again.\n");
-//             }
-//         }
-//     }
-// }
-
 
 
 void makeMove(char board[SIZE][SIZE], int player) {
@@ -192,7 +155,7 @@ void makeMove(char board[SIZE][SIZE], int player) {
                 row = input - '1'; // Convert to 0-based index
             } else {
                 printf("\nInvalid input. Row must be between 1 and 3. Try again.\n");
-                sleep(1); // Wait briefly before retrying
+                usleep(300000); // 300,000 microseconds = 0.3 seconds
                 continue;
             }
         }
