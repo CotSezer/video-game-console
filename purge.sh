@@ -1,20 +1,25 @@
 #!/bin/bash
 
-# Set paths
-DISK_IMAGE="storage_vgc.img"
-MOUNT_POINT="./mount"
+# Variables
+IMAGE_NAME="storage_vgc.img"
+MOUNT_DIR="mount"
+LINK_NAME="storage_vgc_device"
 
-# Unmount and remove the mount directory
-if mountpoint -q $MOUNT_POINT; then
-    umount $MOUNT_POINT
+# Unmount and detach using terminate.sh
+./terminate.sh
+
+# Remove the image file
+if [ -f $IMAGE_NAME ]; then
+    echo "Removing $IMAGE_NAME..."
+    rm -f $IMAGE_NAME
 fi
 
-if [ -d "$MOUNT_POINT" ]; then
-    rmdir $MOUNT_POINT
+# Force remove the mount directory if necessary
+if [ -d $MOUNT_DIR ]; then
+    echo "Force removing mount directory $MOUNT_DIR..."
+    sudo umount -l $MOUNT_DIR 2>/dev/null
+    rmdir $MOUNT_DIR || echo "Could not remove $MOUNT_DIR. It may still be in use."
 fi
 
-# Remove the disk image
-rm -f $DISK_IMAGE
-
-echo "Disk image and mount directory cleaned up."
+echo "Storage purged."
 
